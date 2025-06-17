@@ -8,4 +8,4 @@
 
 
 
-powershell -ExecutionPolicy Bypass -File
+powershell -ExecutionPolicy Bypass -File managerAws.ps1

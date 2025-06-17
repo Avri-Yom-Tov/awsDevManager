@@ -59,10 +59,14 @@ function Update-Status {
     }
 }
 
+
+
 function Write-Log {
     param([string]$Message)
     
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $timestamp = Get-Date -Format "HH:mm:ss"
+#   $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
     $logMessage = "[$timestamp] $Message"
     
     if ($WPFGui.UI) {
@@ -155,66 +159,168 @@ function addNewLine {
 
 #region XAML Definition ( GUI )
 $xaml = @'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="AWS Credential Manager" Height="700" Width="900"
-        WindowStartupLocation="CenterScreen" ResizeMode="CanResize">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Class="System.Windows.Window"
+    Title="AWS Credential Manager"
+    Width="900"
+    MinWidth="900"
+    Height="700"
+    MinHeight="700"
+    Name="CredentialWindow"
+    AllowsTransparency="True"
+    BorderThickness="0"
+    WindowStartupLocation="CenterScreen"
+    ResizeMode="CanResize"
+    WindowStyle="None"
+    Background="Transparent">
+    <Window.Resources>
+        <!-- Button Template -->
+        <SolidColorBrush x:Key="Button.Static.Background" Color="#FFC2C2C2" />
+        <SolidColorBrush x:Key="Button.Static.Border" Color="#FFC2C2C2" />
+        <SolidColorBrush x:Key="Button.MouseOver.Background" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.Pressed.Background" Color="#FF606060" />
+        <SolidColorBrush x:Key="Button.Pressed.Border" Color="#FF606060" />
+        <SolidColorBrush x:Key="Button.Default.Foreground" Color="White" />
+        <SolidColorBrush x:Key="Button.Default.Background" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.Default.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.Success.Background" Color="#FF4CAF50" />
+        <SolidColorBrush x:Key="Button.Warning.Background" Color="#FFFF9800" />
+        <SolidColorBrush x:Key="Button.Danger.Background" Color="#FFF44336" />
         
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#FF2B579A" Padding="10">
-            <TextBlock Text="AWS Credential Manager" FontSize="20" FontWeight="Bold" Foreground="White"/>
-        </Border>
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="BorderBrush" Value="{StaticResource Button.Static.Border}" />
+            <Setter Property="Background" Value="{StaticResource Button.Static.Border}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="8,4,8,4" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true" CornerRadius="4">
+                            <ContentPresenter x:Name="contentPresenter" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsDefault" Value="true">
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.Default.Border}" />
+                    <Setter Property="Background" Value="{StaticResource Button.Default.Background}" />
+                    <Setter Property="Foreground" Value="{StaticResource Button.Default.Foreground}" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="true">
+                    <Setter Property="Background" Value="{StaticResource Button.MouseOver.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.MouseOver.Border}" />
+                    <Setter Property="Foreground" Value="White" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="true">
+                    <Setter Property="Background" Value="{StaticResource Button.Pressed.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.Pressed.Border}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         
-        <!-- Account Selection -->
-        <GroupBox Grid.Row="1" Header="Account Selection" Margin="10">
-            <Grid>
+        <!-- ComboBox Template -->
+        <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#7F7A7A7A" />
+        <SolidColorBrush x:Key="ComboBox.MouseOver.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="ComboBox.Focus.Border" Color="#FF005FB8" />
+        
+        <Style TargetType="{x:Type ComboBox}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ComboBox.Static.Border}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+
+        <Style TargetType="Window">
+            <Style.Triggers>
+                <Trigger Property="IsActive" Value="False">
+                    <Setter Property="BorderBrush" Value="#FFAAAAAA" />
+                </Trigger>
+                <Trigger Property="IsActive" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF005FB8" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="32" ResizeBorderThickness="2" CornerRadius="8" />
+    </WindowChrome.WindowChrome>
+
+    <Border Name="WinBorder" BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" BorderThickness="1" CornerRadius="8" Background="#FFF3F3F3">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="10" ShadowDepth="5" Color="#FF959595" Opacity="0.7" />
+        </Border.Effect>
+        <Grid Name="MainGrid" Background="Transparent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="30" />
+            </Grid.RowDefinitions>
+
+            <!-- Titlebar -->
+            <Border Grid.Row="0" CornerRadius="8,8,0,0" BorderThickness="0" Background="#FF005FB8">
+                <DockPanel Height="32">
+                    <Button DockPanel.Dock="Right" Name="CloseButton" Content="✕" Width="32" Height="32" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14" />
+                    <Button DockPanel.Dock="Right" Name="MinimizeButton" Content="−" Width="32" Height="32" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14" />
+                    <TextBlock DockPanel.Dock="Left" Margin="8,0" Text="AWS Credential Manager" TextAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontFamily="Segoe UI" />
+                </DockPanel>
+            </Border>
+
+            <!-- Main Content -->
+            <Grid Grid.Row="1" Margin="10">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Select Account:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <ComboBox Grid.Column="1" Name="AccountComboBox" DisplayMemberPath="Name" Height="30" FontSize="12"/>
+
+                <!-- Configuration Panel -->
+                <GroupBox Grid.Column="0" Header="Configuration" Margin="0,0,10,0" Padding="10" FontFamily="Segoe UI" FontSize="12">
+                    <StackPanel>
+                        <Label Content="Select Account:" FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold" />
+                        <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" Height="30" Margin="0,0,0,15" />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <Button Name="StartButton" Content="Start" Width="100" Height="35" Margin="0,0,10,0" Background="#FF4CAF50" Foreground="White" FontSize="12" />
+                            <Button Name="StopButton" Content="Stop" Width="100" Height="35" Margin="0,0,10,0" Background="#FFF44336" Foreground="White" FontSize="12" IsEnabled="False" />
+                        </StackPanel>
+                        
+                        <Button Name="RestartButton" Content="Restart" Width="100" Height="35" Margin="0,10,0,0" Background="#FFFF9800" Foreground="White" FontSize="12" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Output Panel -->
+                <GroupBox Grid.Column="1" Header="Activity Log" Padding="10" FontFamily="Segoe UI" FontSize="12">
+                    <ScrollViewer>
+                        <TextBox Name="LogOutput" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" 
+                                 Background="#FFF5F5F5" FontFamily="Consolas" FontSize="10" BorderThickness="0" />
+                    </ScrollViewer>
+                </GroupBox>
             </Grid>
-        </GroupBox>
-        
-        <!-- Control Buttons -->
-        <GroupBox Grid.Row="2" Header="Controls" Margin="10">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Name="StartButton" Content="Start" Width="100" Height="35" Margin="5" FontSize="12" Background="#FF4CAF50" Foreground="White"/>
-                <Button Name="StopButton" Content="Stop" Width="100" Height="35" Margin="5" FontSize="12" Background="#FFF44336" Foreground="White" IsEnabled="False"/>
-                <Button Name="RestartButton" Content="Restart" Width="100" Height="35" Margin="5" FontSize="12" Background="#FFFF9800" Foreground="White"/>
-            </StackPanel>
-        </GroupBox>
-        
-        <!-- Log Output -->
-        <GroupBox Grid.Row="3" Header="Activity Log" Margin="10">
-            <ScrollViewer>
-                <TextBox Name="LogOutput" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" 
-                         Background="#FFF5F5F5" FontFamily="Consolas" FontSize="10"/>
-            </ScrollViewer>
-        </GroupBox>
-        
-        <!-- Progress Bar -->
-        <GroupBox Grid.Row="4" Header="Progress" Margin="10">
-            <ProgressBar Name="ProgressBar" Height="20" Minimum="0" Maximum="100" Value="0"/>
-        </GroupBox>
-        
-        <!-- Status Bar -->
-        <StatusBar Grid.Row="5" Background="#FFF0F0F0">
-            <StatusBarItem>
-                <Label Name="StatusText" Content="Ready" FontSize="11"/>
-            </StatusBarItem>
-        </StatusBar>
-    </Grid>
+
+            <!-- Status Area -->
+            <Border Grid.Row="2" Margin="10,0,10,0" BorderThickness="0">
+                <StatusBar Name="StatusArea" Background="{x:Null}">
+                    <StatusBarItem>
+                        <ProgressBar Name="ProgressBar" Value="0" Width="200" Height="20" />
+                    </StatusBarItem>
+                    <StatusBarItem>
+                        <Label Name="StatusText" Content="Ready" FontFamily="Segoe UI" FontSize="11" />
+                    </StatusBarItem>
+                </StatusBar>
+            </Border>
+        </Grid>
+    </Border>
 </Window>
 '@
 #endregion
@@ -243,6 +349,8 @@ try {
     $Global:WPFGui.LogOutput = $Global:WPFGui.UI.FindName("LogOutput")
     $Global:WPFGui.ProgressBar = $Global:WPFGui.UI.FindName("ProgressBar")
     $Global:WPFGui.StatusText = $Global:WPFGui.UI.FindName("StatusText")
+    $Global:WPFGui.CloseButton = $Global:WPFGui.UI.FindName("CloseButton")
+    $Global:WPFGui.MinimizeButton = $Global:WPFGui.UI.FindName("MinimizeButton")
 
     # Verify all controls were found
     $controls = @("AccountComboBox", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText")
@@ -652,6 +760,15 @@ $Global:WPFGui.UI.Add_Closing({
     } catch {
         # Ignore errors during cleanup
     }
+})
+
+# Title bar button event handlers
+$Global:WPFGui.MinimizeButton.Add_Click({
+    $Global:WPFGui.UI.WindowState = 'Minimized'
+})
+
+$Global:WPFGui.CloseButton.Add_Click({
+    $Global:WPFGui.UI.Close()
 })
 #endregion
 
