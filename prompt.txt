@@ -1,0 +1,18 @@
+I have a  `template.ps1`, which contains only a PowerShell GUI layout (a basic form with visual elements like labels, buttons, and optionally a progress bar). It does not contain any logic - it's just a UI shell.
+
+I also have a second file called `recTest.ps1`, which is a script that fetches temporary AWS credentials for a specific account using MFA (e.g., via sts:assume-role or similar). That script currently runs in the console and asks for user input (such as the MFA code) using Read-Host or similar.
+
+I want you to build me a **single PowerShell script** that combines both:
+- It should **preserve the visual layout** and design of `template.ps1`.
+- It should **run the core functionality of `recTest.ps1`**, including asking the user for the MFA code via a **popup input box** (not in the console).
+- The process should run in the background without freezing the GUI.
+- While it runs, the UI should display progress and update the status accordingly (e.g., "Authenticating...", "Success", "Failed").
+- There should be: 
+- A **"Start" button** to begin the authentication process. 
+- A **"Stop" button** to cancel the current execution. 
+- A **"Rerun" button** to manually trigger the process again at any time.
+- Once the credentials are fetched, the script should: 
+- Display a **success message** in the UI. 
+- The script should also **automatically re-run the credentials retrieval every hour** to refresh them.
+- Everything should be done in a **single `.ps1` file** (no dependencies on external files).
+- The solution should use **Windows Forms** or **WPF**, depending on what's used in `template.ps1`.
