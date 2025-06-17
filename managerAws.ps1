@@ -1,50 +1,37 @@
-# AWS Credential Manager with GUI - FIXED VERSION
-# Combined script that provides a modern WPF interface for AWS credential management
+# AWS Credential Manager with GUI FOR EASY USE OF AWS CREDENTIALS DEVELOPMENT
 
 #region Global Variables and Configuration
+
+
+
 $Global:IsRunning = $false
-$Global:StopRequested = $false
 $Global:CurrentJob = $null
+$Global:StopRequested = $false
 
-# AWS Configuration - Update these with your values
-$user = 'Avraham.Yom-Tov' # Your AWS username
-$target_profile_name_codeartifact = 'GroupAccess-NICE-Developers' # Target Profile name for codeartifact
-$target_account_num_codeartifact = '369498121101' # This is account number for codeartifact
-$role_name = 'GroupAccess-Developers-Recording' # Your role in the target account
-$source_profile = 'nice-identity' # This is your profile name as you configured it in .aws/credentials
-$main_iam_acct_num = '736763050260' # This should be the nice-identity account number
-$default_region = 'us-west-2' # Default region for where your CLI session lives
-$MFA_SESSION = "$source_profile-mfa-session"
+# Configuration - Update these with your values ..
+$user = 'Avraham.Yom-Tov' 
 $DEFAULT_SESSION = "default"
+$default_region = 'us-west-2'
+$source_profile = 'nice-identity' 
+$main_iam_acct_num = '736763050260'
+$MFA_SESSION = "$source_profile-mfa-session"
 $CODEARTIFACT_SESSION = "default-codeartifact"
+$role_name = 'GroupAccess-Developers-Recording'
+$target_account_num_codeartifact = '369498121101' 
 $m2_config_file = "C:\Users\$env:UserName\.m2\settings.xml"
+$target_profile_name_codeartifact = 'GroupAccess-NICE-Developers' 
 
-# Account list for selection
+
+#region Account LisT ( selection - you can add more accounts here if needed )
 $Global:AccountList = @(
-    # [PSCustomObject]@{ AccountId = 934137132601; Name = "WFO-DEV" }
-    # [PSCustomObject]@{ AccountId = 636107004818; Name = "WFO-PERF-WCX" }
-    # [PSCustomObject]@{ AccountId = 918987959928; Name = "WFO-NA1" }
-    # [PSCustomObject]@{ AccountId = 918987959928; Name = "WFO-UK" }
-    # [PSCustomObject]@{ AccountId = 918987959928; Name = "WFO-DE" }
-    # [PSCustomObject]@{ AccountId = 918987959928; Name = "WFO-JP" }
-    # [PSCustomObject]@{ AccountId = 692416605838; Name = "WFO-JO" }
-    # [PSCustomObject]@{ AccountId = 918987959928; Name = "WFO-CA" }
-    # [PSCustomObject]@{ AccountId = 371021933542; Name = "WFO-EA" }
-    # [PSCustomObject]@{ AccountId = 918987959928; Name = "WFO-AU" }
-    # [PSCustomObject]@{ AccountId = 814740517824; Name = "WFO-KR" }
-    # [PSCustomObject]@{ AccountId = 334442430111; Name = "WFO-FedRamp" }
+
     [PSCustomObject]@{ AccountId = 730335479582; Name = "rec-dev" }
     [PSCustomObject]@{ AccountId = 211125581625; Name = "rec-test" }
     [PSCustomObject]@{ AccountId = 339712875220; Name = "rec-perf" }
     [PSCustomObject]@{ AccountId = 891377049518; Name = "rec-staging" }
     [PSCustomObject]@{ AccountId = 934137132601; Name = "dev-test-perf" }
-    # [PSCustomObject]@{ AccountId = 891377174057; Name = "REC-UK" }
-    # [PSCustomObject]@{ AccountId = 654654430801; Name = "REC-NA1" }
-    # [PSCustomObject]@{ AccountId = 975050195246; Name = "REC-AU" }
-    # [PSCustomObject]@{ AccountId = 654654229265; Name = "REC-CA" }
-    # [PSCustomObject]@{ AccountId = 741035499300; Name = "PIXL" }
 )
-#endregion
+
 
 # Add required assemblies at the top level
 try {
@@ -85,7 +72,7 @@ function Write-Log {
         })
     }
     
-    # Also write to console for debugging
+    # Write to console for debugging ( dev)
     Write-Host $logMessage
 }
 
@@ -165,9 +152,8 @@ function addNewLine {
         }
     }
 }
-#endregion
 
-#region XAML Definition
+#region XAML Definition ( GUI )
 $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -237,7 +223,7 @@ $xaml = @'
 $Global:WPFGui = @{}
 
 try {
-    Write-Host "Loading GUI..."
+    Write-Host "Loading GUI ..."
     
     # Load the XAML
     $reader = New-Object System.Xml.XmlNodeReader ([xml]$xaml)
@@ -363,7 +349,7 @@ $Global:WPFGui.StartButton.Add_Click({
                 aws configure set region $default_region --profile $target_profile_name
                 aws configure set region $default_region --profile $target_profile_name_codeartifact
 
-                Write-Output "Successfully cached token for $token_expiration_seconds seconds."
+                Write-Output "Successfully cached token for $token_expiration_seconds seconds .."
 
                 # Start the renewal loop for 36 hours
                 for ($hour = 36; $hour -gt 0; $hour--) {
