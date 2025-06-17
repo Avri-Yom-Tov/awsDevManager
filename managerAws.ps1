@@ -252,6 +252,73 @@ $xaml = @'
                 </Trigger>
             </Style.Triggers>
         </Style>
+        
+        <!-- Title Bar Button Style from working template -->
+        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="border" Background="Transparent" BorderThickness="0" SnapsToDevicePixels="true" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                            <Viewbox Name="ContentViewbox" Stretch="Uniform">
+                                <Path Name="ContentPath" Data="" Stroke="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1.25"/>
+                            </Viewbox>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="Minimize">
+                                <Setter TargetName="ContentPath" Property="Data" Value="M 0,0.5 H 10" />
+                                <Setter TargetName="ContentViewbox" Property="Width" Value="10" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Close">
+                                <Setter TargetName="ContentPath" Property="Data" Value="M 0.35355339,0.35355339 9.3535534,9.3535534 M 0.35355339,9.3535534 9.3535534,0.35355339" />
+                                <Setter TargetName="ContentViewbox" Property="Height" Value="10" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="Foreground" Value="#FF0F7FD6" />
+                                <Setter TargetName="ContentPath" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#FF0F7FD6" ShadowDepth="0" Opacity="1" BlurRadius="10"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="Tag" Value="Close" />
+                                </MultiTrigger.Conditions>
+                                <MultiTrigger.Setters>
+                                    <Setter Property="Foreground" Value="Red" />
+                                    <Setter TargetName="ContentPath" Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect Color="Red" ShadowDepth="0" Opacity="1"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </MultiTrigger.Setters>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsPressed" Value="True" />
+                                    <Condition Property="Tag" Value="Close" />
+                                </MultiTrigger.Conditions>
+                                <MultiTrigger.Setters>
+                                    <Setter Property="Foreground" Value="Red" />
+                                    <Setter TargetName="ContentPath" Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect Color="Red" ShadowDepth="0" Opacity="1"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </MultiTrigger.Setters>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="32" ResizeBorderThickness="2" CornerRadius="8" />
@@ -271,8 +338,8 @@ $xaml = @'
             <!-- Titlebar -->
             <Border Grid.Row="0" CornerRadius="8,8,0,0" BorderThickness="0" Background="#FF005FB8">
                 <DockPanel Height="32">
-                    <Button DockPanel.Dock="Right" Name="CloseButton" Content="✕" Width="32" Height="32" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14" />
-                    <Button DockPanel.Dock="Right" Name="MinimizeButton" Content="−" Width="32" Height="32" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14" />
+                    <Button DockPanel.Dock="Right" Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" />
+                    <Button DockPanel.Dock="Right" Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Minimize" />
                     <TextBlock DockPanel.Dock="Left" Margin="8,0" Text="AWS Credential Manager" TextAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontFamily="Segoe UI" />
                 </DockPanel>
             </Border>
@@ -353,7 +420,7 @@ try {
     $Global:WPFGui.MinimizeButton = $Global:WPFGui.UI.FindName("MinimizeButton")
 
     # Verify all controls were found
-    $controls = @("AccountComboBox", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText")
+    $controls = @("AccountComboBox", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText", "CloseButton", "MinimizeButton")
     foreach ($control in $controls) {
         if (-not $Global:WPFGui[$control]) {
             Write-Warning "Control $control not found!"
@@ -375,6 +442,16 @@ try {
     Read-Host "Press Enter to exit"
     exit 1
 }
+
+#region Title bar button event handlers
+$Global:WPFGui.MinimizeButton.add_Click({
+    $Global:WPFGui.UI.WindowState = 'Minimized'
+})
+
+$Global:WPFGui.CloseButton.add_Click({
+    $Global:WPFGui.UI.Close()
+})
+#endregion
 
 #region Event Handlers
 $Global:WPFGui.StartButton.Add_Click({
@@ -760,15 +837,6 @@ $Global:WPFGui.UI.Add_Closing({
     } catch {
         # Ignore errors during cleanup
     }
-})
-
-# Title bar button event handlers
-$Global:WPFGui.MinimizeButton.Add_Click({
-    $Global:WPFGui.UI.WindowState = 'Minimized'
-})
-
-$Global:WPFGui.CloseButton.Add_Click({
-    $Global:WPFGui.UI.Close()
 })
 #endregion
 
