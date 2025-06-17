@@ -43,23 +43,68 @@ try {
 }
 
 #region Utility Functions
+function Write-StatusBar {
+    <#
+        .SYNOPSIS
+        Write text, and a progress percentage, to the StatusBar area
+
+        .DESCRIPTION
+        Writes Status text and progress to the StatusBar area.
+
+        .PARAMETER Progress
+        Progress Bar value, from 0-100
+
+        .PARAMETER Text
+        Status Text to display
+
+        .EXAMPLE
+
+        Write-StatusBar -Progress 25 -Text "We're a quarter of the way there."
+
+        .NOTES
+        If you change the name of $WPFGui, you'll need to change it here.
+
+        .INPUTS
+        Text
+
+        .OUTPUTS
+        None
+    #>
+
+    param (
+        # Progress value from 0-100
+        [Parameter(Mandatory = $true)]
+        [int]
+        $Progress,
+        # Text to be displayed
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Text
+    )
+    if ($WPFGui.UI) {
+        $WPFGui.UI.Dispatcher.invoke([action] {
+            $WPFGui.ProgressBar.Value = $Progress
+            $WPFGui.StatusText.Content = $Text
+        })
+    }
+}
+
 function Update-Status {
     param(
         [string]$Message,
         [int]$Progress = -1
     )
     
-    if ($WPFGui.UI) {
-        $WPFGui.UI.Dispatcher.Invoke([Action]{
-            $WPFGui.StatusText.Content = $Message
-            if ($Progress -ge 0) {
-                $WPFGui.ProgressBar.Value = $Progress
-            }
-        })
+    if ($Progress -ge 0) {
+        Write-StatusBar -Progress $Progress -Text $Message
+    } else {
+        if ($WPFGui.UI) {
+            $WPFGui.UI.Dispatcher.Invoke([Action]{
+                $WPFGui.StatusText.Content = $Message
+            })
+        }
     }
 }
-
-
 
 function Write-Log {
     param([string]$Message)
@@ -483,6 +528,8 @@ $Global:WPFGui.StartButton.Add_Click({
         $Global:WPFGui.StopButton.IsEnabled = $true
         $Global:WPFGui.RestartButton.IsEnabled = $false
 
+        Write-StatusBar -Progress 5 -Text "Starting AWS credential process..."
+        
         # Start background job using PowerShell jobs instead of runspaces for simplicity
         $Global:CurrentJob = Start-Job -ScriptBlock {
             param($SelectedAccount, $MFACode, $user, $target_profile_name_codeartifact, $target_account_num_codeartifact, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $m2_config_file)
@@ -512,7 +559,7 @@ $Global:WPFGui.StartButton.Add_Click({
                 $target_role_codeartifact = "arn:aws:iam::" + $target_account_num_codeartifact + ":role/" + $role_name
 
                 # Get session token with MFA
-                Write-Output "Getting session token with MFA..."
+                Write-Output "PROGRESS:10:Getting session token with MFA..."
                 $token_result = aws sts get-session-token --serial-number $mfa_device --duration-seconds $token_expiration_seconds --token-code $MFACode --profile $source_profile 2>&1
 
                 if ($LASTEXITCODE -ne 0) {
@@ -527,6 +574,7 @@ $Global:WPFGui.StartButton.Add_Click({
                     throw "Failed to parse AWS response. Please check your AWS configuration."
                 }
                 
+                Write-Output "PROGRESS:20:Configuring AWS credentials..."
                 # Set AWS credentials via CLI
                 aws configure set aws_access_key_id $token_creds.Credentials.AccessKeyId --profile "$MFA_SESSION"
                 aws configure set aws_secret_access_key $token_creds.Credentials.SecretAccessKey --profile "$MFA_SESSION"
@@ -535,11 +583,15 @@ $Global:WPFGui.StartButton.Add_Click({
                 aws configure set region $default_region --profile $target_profile_name_codeartifact
 
                 Write-Output "Successfully cached token for $token_expiration_seconds seconds .."
+                Write-Output "PROGRESS:25:Starting credential renewal loop..."
 
                 # Start the renewal loop for 36 hours
                 for ($hour = 36; $hour -gt 0; $hour--) {
                     try {
-                        Write-Output "Renewing $target_profile_name access keys... ($hour hours remaining)"
+                        # Calculate progress: 25% to 95% over 36 hours
+                        $progressPercent = [math]::Round(25 + ((36 - $hour) / 36 * 70))
+                        $hourText = if ($hour -eq 1) { "hour" } else { "hours" }
+                        Write-Output "PROGRESS:$($progressPercent):Renewing credentials... ($hour $hourText remaining)"
 
                         $creds = aws sts assume-role --role-arn $target_role --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
                         $creds_codeartifact = aws sts assume-role --role-arn $target_role_codeartifact --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
@@ -594,11 +646,15 @@ $Global:WPFGui.StartButton.Add_Click({
                                 Write-Output "NPM not installed or error: $($_.Exception.Message)"
                             }
 
-                            $hourText = if ($hour -eq 1) { "hour" } else { "hours" }
                             Write-Output "Credentials renewed successfully. Sleeping for 59 minutes... ($hour $hourText remaining)"
 
-                            # Sleep for 59 minutes
-                            Start-Sleep -Seconds 3540
+                            # Sleep for 59 minutes with periodic progress updates
+                            for ($minute = 59; $minute -gt 0; $minute--) {
+                                Start-Sleep -Seconds 60
+                                if ($minute % 10 -eq 0) {
+                                    Write-Output "PROGRESS:$($progressPercent):Waiting... ($hour $hourText, $minute minutes remaining)"
+                                }
+                            }
                         } else {
                             throw "Failed to assume role"
                         }
@@ -608,7 +664,7 @@ $Global:WPFGui.StartButton.Add_Click({
                     }
                 }
                 
-                Write-Output "MFA token credentials have expired after 36 hours."
+                Write-Output "PROGRESS:100:MFA token credentials have expired after 36 hours."
 
             } catch {
                 Write-Output "Error: $($_.Exception.Message)"
@@ -632,7 +688,15 @@ $Global:WPFGui.StartButton.Add_Click({
                         if ($jobOutput) {
                             foreach ($line in $jobOutput) {
                                 try {
-                                    Write-Log $line
+                                    # Check if this is a progress message
+                                    if ($line -match '^PROGRESS:(\d+):(.+)$') {
+                                        $progressValue = [int]$matches[1]
+                                        $progressText = $matches[2]
+                                        Write-StatusBar -Progress $progressValue -Text $progressText
+                                        Write-Log $progressText
+                                    } else {
+                                        Write-Log $line
+                                    }
                                 } catch {
                                     # Ignore log errors
                                 }
@@ -681,7 +745,7 @@ $Global:WPFGui.StartButton.Add_Click({
                             $Global:CurrentJob = $null
                             
                             try {
-                                Update-Status "Ready" 0
+                                Write-StatusBar -Progress 0 -Text "Ready"
                             } catch {
                                 # Ignore status update errors
                             }
@@ -730,7 +794,7 @@ $Global:WPFGui.StopButton.Add_Click({
     try {
         $Global:StopRequested = $true
         Write-Log "Stop requested by user. Stopping process..."
-        Update-Status "Stopping process..." 0
+        Write-StatusBar -Progress 0 -Text "Stopping process..."
         $Global:WPFGui.StopButton.IsEnabled = $false
         
         if ($Global:CurrentJob) {
@@ -801,7 +865,7 @@ $Global:WPFGui.RestartButton.Add_Click({
         # Clear the log
         $Global:WPFGui.LogOutput.Clear()
         $Global:WPFGui.ProgressBar.Value = 0
-        Update-Status "Ready" 0
+        Write-StatusBar -Progress 0 -Text "Ready"
         
         # Reset button states
         $Global:WPFGui.StartButton.IsEnabled = $true
