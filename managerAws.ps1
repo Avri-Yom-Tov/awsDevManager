@@ -84,7 +84,7 @@ function Write-StatusBar {
     if ($WPFGui.UI) {
         $WPFGui.UI.Dispatcher.invoke([action] {
             $WPFGui.ProgressBar.Value = $Progress
-            $WPFGui.StatusText.Content = $Text
+            $WPFGui.StatusText.Text = $Text
         })
     }
 }
@@ -100,7 +100,7 @@ function Update-Status {
     } else {
         if ($WPFGui.UI) {
             $WPFGui.UI.Dispatcher.Invoke([Action]{
-                $WPFGui.StatusText.Content = $Message
+                $WPFGui.StatusText.Text = $Message
             })
         }
     }
@@ -221,13 +221,19 @@ $xaml = @'
     WindowStyle="None"
     Background="Transparent">
     <Window.Resources>
-        <!-- Button Template -->
-        <SolidColorBrush x:Key="Button.Static.Background" Color="#FFC2C2C2" />
-        <SolidColorBrush x:Key="Button.Static.Border" Color="#FFC2C2C2" />
+        <!-- Modern Windows 11 Style Resources -->
+        
+        <!-- Button Styles -->
+        <SolidColorBrush x:Key="Button.Static.Background" Color="#FFFBFBFB" />
+        <SolidColorBrush x:Key="Button.Static.Border" Color="#FFCCCCCC" />
         <SolidColorBrush x:Key="Button.MouseOver.Background" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.MouseOver.Foreground" Color="#FFFFFFFF" />
         <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#FF005FB8" />
         <SolidColorBrush x:Key="Button.Pressed.Background" Color="#FF606060" />
         <SolidColorBrush x:Key="Button.Pressed.Border" Color="#FF606060" />
+        <SolidColorBrush x:Key="Button.Disabled.Background" Color="#FFF0F0F0" />
+        <SolidColorBrush x:Key="Button.Disabled.Border" Color="#FFADB2B5" />
+        <SolidColorBrush x:Key="Button.Disabled.Foreground" Color="#FF838383" />
         <SolidColorBrush x:Key="Button.Default.Foreground" Color="White" />
         <SolidColorBrush x:Key="Button.Default.Background" Color="#FF005FB8" />
         <SolidColorBrush x:Key="Button.Default.Border" Color="#FF005FB8" />
@@ -236,20 +242,31 @@ $xaml = @'
         <SolidColorBrush x:Key="Button.Danger.Background" Color="#FFF44336" />
         
         <Style TargetType="{x:Type Button}">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="BorderBrush" Value="{StaticResource Button.Static.Border}" />
-            <Setter Property="Background" Value="{StaticResource Button.Static.Border}" />
+            <Setter Property="Background" Value="{StaticResource Button.Static.Background}" />
             <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderThickness" Value="1,1,1,2" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Padding" Value="8,4,8,4" />
+            <Setter Property="Padding" Value="12,8,12,8" />
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true" CornerRadius="4">
-                            <ContentPresenter x:Name="contentPresenter" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        <Border BorderThickness="0" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Background="{TemplateBinding Background}" SnapsToDevicePixels="true"
+                                    CornerRadius="4" Padding="0" Margin="0">
+                                <ContentPresenter x:Name="contentPresenter" Focusable="False"
+                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                        Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
+                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -262,31 +279,145 @@ $xaml = @'
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="true">
                     <Setter Property="Background" Value="{StaticResource Button.MouseOver.Background}" />
+                    <Setter Property="Foreground" Value="{StaticResource Button.MouseOver.Foreground}" />
                     <Setter Property="BorderBrush" Value="{StaticResource Button.MouseOver.Border}" />
-                    <Setter Property="Foreground" Value="White" />
                 </Trigger>
                 <Trigger Property="IsPressed" Value="true">
                     <Setter Property="Background" Value="{StaticResource Button.Pressed.Background}" />
                     <Setter Property="BorderBrush" Value="{StaticResource Button.Pressed.Border}" />
                 </Trigger>
+                <Trigger Property="IsEnabled" Value="false">
+                    <Setter Property="Background" Value="{StaticResource Button.Disabled.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.Disabled.Background}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource Button.Disabled.Foreground}" />
+                </Trigger>
             </Style.Triggers>
         </Style>
         
-        <!-- ComboBox Template -->
-        <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#7F7A7A7A" />
+        <!-- ComboBox Styles -->
+        <SolidColorBrush x:Key="ComboBox.Static.Background" Color="White" />
+        <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#FFBDBDBD" />
+        <SolidColorBrush x:Key="ComboBox.MouseOver.Background" Color="#FFFFFFFF" />
         <SolidColorBrush x:Key="ComboBox.MouseOver.Border" Color="#FF005FB8" />
         <SolidColorBrush x:Key="ComboBox.Focus.Border" Color="#FF005FB8" />
         
         <Style TargetType="{x:Type ComboBox}">
-            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
+            <Setter Property="Background" Value="{StaticResource ComboBox.Static.Background}" />
             <Setter Property="BorderBrush" Value="{StaticResource ComboBox.Static.Border}" />
             <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="1,1,1,2" />
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="12,8,12,8" />
+            <Setter Property="Height" Value="40" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="true">
+                    <Setter Property="Background" Value="{StaticResource ComboBox.MouseOver.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource ComboBox.MouseOver.Border}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="true">
+                    <Setter Property="BorderBrush" Value="{StaticResource ComboBox.Focus.Border}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
+        <!-- TextBox Styles -->
+        <SolidColorBrush x:Key="TextBox.Static.Border" Color="#7F7A7A7A" />
+        <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="TextBox.Focus.Border" Color="#FF005FB8" />
+        
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
+            <Setter Property="BorderBrush" Value="{StaticResource TextBox.Static.Border}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="Padding" Value="12,8,12,8" />
+            <Setter Property="BorderThickness" Value="1,1,1,2" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Background="{TemplateBinding Background}" SnapsToDevicePixels="True"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false"
+                                        HorizontalScrollBarVisibility="Hidden"
+                                        VerticalScrollBarVisibility="Hidden" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border"
+                                        Value="{StaticResource TextBox.MouseOver.Border}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border"
+                                        Value="{StaticResource TextBox.Focus.Border}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- GroupBox Styles -->
+        <Style TargetType="{x:Type GroupBox}">
+            <Setter Property="BorderBrush" Value="#FFE0E0E0" />
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="15" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type GroupBox}">
+                        <Grid SnapsToDevicePixels="true">
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="8"
+                                    BorderThickness="{TemplateBinding BorderThickness}" Grid.ColumnSpan="4"
+                                    Grid.Row="1" Grid.RowSpan="3" Background="{TemplateBinding Background}">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#FFE0E0E0" Opacity="0.3" />
+                                </Border.Effect>
+                                <DockPanel>
+                                    <ContentPresenter DockPanel.Dock="Top"
+                                                Margin="{TemplateBinding Padding}" ContentSource="Header"
+                                                RecognizesAccessKey="True"
+                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                HorizontalAlignment="Stretch" VerticalAlignment="Top" />
+                                    <ContentPresenter DockPanel.Dock="Top"
+                                                Margin="{TemplateBinding Padding}"
+                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Progress Bar Style -->
+        <SolidColorBrush x:Key="ProgressBar.Track" Color="#FFE0E0E0" />
+        <SolidColorBrush x:Key="ProgressBar.Indicator" Color="#FF005FB8" />
+        
+        <Style TargetType="{x:Type ProgressBar}">
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ProgressBar}">
+                        <Grid>
+                            <Border Name="PART_Track"
+                                    Background="{StaticResource ProgressBar.Track}"
+                                    BorderThickness="0" CornerRadius="4" Height="8"/>
+                            <Border Name="PART_Indicator" CornerRadius="4" Height="8"
+                                    Background="{StaticResource ProgressBar.Indicator}"
+                                    HorizontalAlignment="Left" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Window Style -->
         <Style TargetType="Window">
             <Style.Triggers>
                 <Trigger Property="IsActive" Value="False">
@@ -298,7 +429,7 @@ $xaml = @'
             </Style.Triggers>
         </Style>
         
-        <!-- Title Bar Button Style from working template -->
+        <!-- Title Bar Button Style -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
@@ -306,30 +437,25 @@ $xaml = @'
             <Setter Property="Padding" Value="0" />
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
             <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" Background="Transparent" BorderThickness="0" SnapsToDevicePixels="true" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
-                            <Viewbox Name="ContentViewbox" Stretch="Uniform">
-                                <Path Name="ContentPath" Data="" Stroke="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1.25"/>
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderThickness="0" SnapsToDevicePixels="true">
+                            <Viewbox Name="ContentViewbox" Stretch="Uniform" Margin="6" Width="16" Height="16">
+                                <Path Name="ContentPath" Data="" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"/>
                             </Viewbox>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Tag" Value="Minimize">
                                 <Setter TargetName="ContentPath" Property="Data" Value="M 0,0.5 H 10" />
-                                <Setter TargetName="ContentViewbox" Property="Width" Value="10" />
                             </Trigger>
                             <Trigger Property="Tag" Value="Close">
                                 <Setter TargetName="ContentPath" Property="Data" Value="M 0.35355339,0.35355339 9.3535534,9.3535534 M 0.35355339,9.3535534 9.3535534,0.35355339" />
-                                <Setter TargetName="ContentViewbox" Property="Height" Value="10" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="true">
-                                <Setter Property="Foreground" Value="#FF0F7FD6" />
-                                <Setter TargetName="ContentPath" Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect Color="#FF0F7FD6" ShadowDepth="0" Opacity="1" BlurRadius="10"/>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter TargetName="border" Property="Background" Value="#33FFFFFF" />
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -337,26 +463,7 @@ $xaml = @'
                                     <Condition Property="Tag" Value="Close" />
                                 </MultiTrigger.Conditions>
                                 <MultiTrigger.Setters>
-                                    <Setter Property="Foreground" Value="Red" />
-                                    <Setter TargetName="ContentPath" Property="Effect">
-                                        <Setter.Value>
-                                            <DropShadowEffect Color="Red" ShadowDepth="0" Opacity="1"/>
-                                        </Setter.Value>
-                                    </Setter>
-                                </MultiTrigger.Setters>
-                            </MultiTrigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsPressed" Value="True" />
-                                    <Condition Property="Tag" Value="Close" />
-                                </MultiTrigger.Conditions>
-                                <MultiTrigger.Setters>
-                                    <Setter Property="Foreground" Value="Red" />
-                                    <Setter TargetName="ContentPath" Property="Effect">
-                                        <Setter.Value>
-                                            <DropShadowEffect Color="Red" ShadowDepth="0" Opacity="1"/>
-                                        </Setter.Value>
-                                    </Setter>
+                                    <Setter TargetName="border" Property="Background" Value="#FFE81123" />
                                 </MultiTrigger.Setters>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
@@ -365,72 +472,98 @@ $xaml = @'
             </Setter>
         </Style>
     </Window.Resources>
+    
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="32" ResizeBorderThickness="2" CornerRadius="8" />
     </WindowChrome.WindowChrome>
 
-    <Border Name="WinBorder" BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" BorderThickness="1" CornerRadius="8" Background="#FFF3F3F3">
+    <Border Name="WinBorder" BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" BorderThickness="1" CornerRadius="8" Background="#FFF7F7F7">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="10" ShadowDepth="5" Color="#FF959595" Opacity="0.7" />
+            <DropShadowEffect BlurRadius="15" ShadowDepth="5" Color="#FF959595" Opacity="0.3" />
         </Border.Effect>
         <Grid Name="MainGrid" Background="Transparent">
             <Grid.RowDefinitions>
                 <RowDefinition Height="32" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="30" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Titlebar -->
+            <!-- Title Bar -->
             <Border Grid.Row="0" CornerRadius="8,8,0,0" BorderThickness="0" Background="#FF005FB8">
                 <DockPanel Height="32">
                     <Button DockPanel.Dock="Right" Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" />
                     <Button DockPanel.Dock="Right" Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Minimize" />
-                    <TextBlock DockPanel.Dock="Left" Margin="8,0" Text="AWS Credential Manager" TextAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontFamily="Segoe UI" />
+                    <TextBlock DockPanel.Dock="Left" Margin="16,0" Text="AWS Credential Manager" 
+                               VerticalAlignment="Center" Foreground="White" FontWeight="SemiBold" 
+                               FontFamily="Segoe UI" FontSize="14" />
                 </DockPanel>
             </Border>
 
-            <!-- Main Content -->
-            <Grid Grid.Row="1" Margin="10">
+            <!-- Main Content Area -->
+            <Grid Grid.Row="1" Margin="20">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="320" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Configuration Panel -->
-                <GroupBox Grid.Column="0" Header="Configuration" Margin="0,0,10,0" Padding="10" FontFamily="Segoe UI" FontSize="12">
+                <GroupBox Grid.Column="0" Header="Configuration" Margin="0,0,15,0">
                     <StackPanel>
-                        <Label Content="Select Account:" FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold" />
-                        <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" Height="30" Margin="0,0,0,15" />
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                            <Button Name="StartButton" Content="Start" Width="100" Height="35" Margin="0,0,10,0" Background="#FF4CAF50" Foreground="White" FontSize="12" />
-                            <Button Name="StopButton" Content="Stop" Width="100" Height="35" Margin="0,0,10,0" Background="#FFF44336" Foreground="White" FontSize="12" IsEnabled="False" />
+                        <StackPanel Margin="0,0,0,20">
+                            <Label Content="Account Selection" FontWeight="SemiBold" FontSize="14" 
+                                   Margin="0,0,0,8" Foreground="#FF666666"/>
+                            <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" />
                         </StackPanel>
                         
-                        <Button Name="RestartButton" Content="Restart" Width="100" Height="35" Margin="0,10,0,0" Background="#FFFF9800" Foreground="White" FontSize="12" />
+                        <!-- Action Buttons -->
+                        <StackPanel Margin="0,30,0,0">
+                            <Button Name="StartButton" Content="Start Process" Height="45" Margin="0,0,0,12"
+                                    Background="{StaticResource Button.Success.Background}" 
+                                    Foreground="White" FontWeight="SemiBold" IsDefault="True" />
+                                    
+                            <Button Name="StopButton" Content="Stop Process" Height="45" Margin="0,0,0,12"
+                                    Background="{StaticResource Button.Danger.Background}" 
+                                    Foreground="White" FontWeight="SemiBold" IsEnabled="False" />
+                                    
+                            <Button Name="RestartButton" Content="Restart Process" Height="45"
+                                    Background="{StaticResource Button.Warning.Background}" 
+                                    Foreground="White" FontWeight="SemiBold" />
+                        </StackPanel>
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Output Panel -->
-                <GroupBox Grid.Column="1" Header="Activity Log" Padding="10" FontFamily="Segoe UI" FontSize="12">
-                    <ScrollViewer>
-                        <TextBox Name="LogOutput" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" 
-                                 Background="#FFF5F5F5" FontFamily="Consolas" FontSize="10" BorderThickness="0" />
-                    </ScrollViewer>
+                <!-- Activity Log Panel -->
+                <GroupBox Grid.Column="1" Header="Activity Log">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <Border CornerRadius="6" Background="#FFFAFAFA" BorderBrush="#FFE0E0E0" BorderThickness="1">
+                            <ScrollViewer Name="LogScrollViewer" Padding="15">
+                                <TextBox Name="LogOutput" IsReadOnly="True" TextWrapping="Wrap" 
+                                         Background="Transparent" BorderThickness="0"
+                                         FontFamily="Consolas" FontSize="11" 
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
                 </GroupBox>
             </Grid>
 
-            <!-- Status Area -->
-            <Border Grid.Row="2" Margin="10,0,10,0" BorderThickness="0">
-                <StatusBar Name="StatusArea" Background="{x:Null}">
-                    <StatusBarItem>
-                        <ProgressBar Name="ProgressBar" Value="0" Width="200" Height="20" />
-                    </StatusBarItem>
-                    <StatusBarItem>
-                        <Label Name="StatusText" Content="Ready" FontFamily="Segoe UI" FontSize="11" />
-                    </StatusBarItem>
-                </StatusBar>
-            </Border>
+                         <!-- Status Bar -->
+             <Border Grid.Row="2" Background="#FFF0F0F0" CornerRadius="0,0,8,8" BorderThickness="0,1,0,0" BorderBrush="#FFE0E0E0">
+                 <Grid Margin="20,12">
+                     <Grid.RowDefinitions>
+                         <RowDefinition Height="Auto" />
+                         <RowDefinition Height="Auto" />
+                     </Grid.RowDefinitions>
+                     
+                     <ProgressBar Grid.Row="0" Name="ProgressBar" Value="0" Height="8" Margin="0,0,0,8" />
+                     <TextBlock Grid.Row="1" Name="StatusText" Text="Ready" FontFamily="Segoe UI" FontSize="12" 
+                                HorizontalAlignment="Center" Foreground="#FF666666" />
+                 </Grid>
+             </Border>
         </Grid>
     </Border>
 </Window>
@@ -463,6 +596,7 @@ try {
     $Global:WPFGui.StatusText = $Global:WPFGui.UI.FindName("StatusText")
     $Global:WPFGui.CloseButton = $Global:WPFGui.UI.FindName("CloseButton")
     $Global:WPFGui.MinimizeButton = $Global:WPFGui.UI.FindName("MinimizeButton")
+    $Global:WPFGui.LogScrollViewer = $Global:WPFGui.UI.FindName("LogScrollViewer")
 
     # Verify all controls were found
     $controls = @("AccountComboBox", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText", "CloseButton", "MinimizeButton")
