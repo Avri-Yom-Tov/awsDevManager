@@ -695,7 +695,7 @@ $Global:WPFGui.StartButton.Add_Click({
         $Global:WPFGui.StopButton.IsEnabled = $true
         $Global:WPFGui.RestartButton.IsEnabled = $false
 
-        Write-StatusBar -Progress 5 -Text "Starting AWS credential process..."
+        Write-StatusBar -Text "Starting AWS credential process..." -Indeterminate
         
         # Start background job using PowerShell jobs instead of runspaces for simplicity
         $Global:CurrentJob = Start-Job -ScriptBlock {
@@ -726,7 +726,7 @@ $Global:WPFGui.StartButton.Add_Click({
                 $target_role_codeartifact = "arn:aws:iam::" + $target_account_num_codeartifact + ":role/" + $role_name
 
                 # Get session token with MFA
-                Write-Output "PROGRESS:10:Getting session token with MFA..."
+                Write-Output "PROGRESS:INDETERMINATE:Getting session token with MFA..."
                 $token_result = aws sts get-session-token --serial-number $mfa_device --duration-seconds $token_expiration_seconds --token-code $MFACode --profile $source_profile 2>&1
 
                 if ($LASTEXITCODE -ne 0) {
@@ -741,7 +741,7 @@ $Global:WPFGui.StartButton.Add_Click({
                     throw "Failed to parse AWS response. Please check your AWS configuration."
                 }
                 
-                Write-Output "PROGRESS:20:Configuring AWS credentials..."
+                Write-Output "PROGRESS:INDETERMINATE:Configuring AWS credentials..."
                 # Set AWS credentials via CLI
                 aws configure set aws_access_key_id $token_creds.Credentials.AccessKeyId --profile "$MFA_SESSION"
                 aws configure set aws_secret_access_key $token_creds.Credentials.SecretAccessKey --profile "$MFA_SESSION"
@@ -750,13 +750,11 @@ $Global:WPFGui.StartButton.Add_Click({
                 aws configure set region $default_region --profile $target_profile_name_codeartifact
 
                 Write-Output "Successfully cached token for $token_expiration_seconds seconds .."
-                Write-Output "PROGRESS:25:Starting credential renewal loop..."
+                Write-Output "PROGRESS:INDETERMINATE:Starting credential renewal loop..."
 
                 # Start the renewal loop for 36 hours
                 for ($hour = 36; $hour -gt 0; $hour--) {
                     try {
-                        # Calculate overall progress: 25% to 95% over 36 hours
-                        $overallProgress = [math]::Round(25 + ((36 - $hour) / 36 * 70))
                         $hourText = if ($hour -eq 1) { "hour" } else { "hours" }
                         
                         # Use indeterminate progress bar during actual renewal operations
@@ -815,14 +813,14 @@ $Global:WPFGui.StartButton.Add_Click({
                                 Write-Output "NPM not installed or error: $($_.Exception.Message)"
                             }
 
-                            # Switch back to normal progress bar for waiting period
-                            Write-Output "PROGRESS:$($overallProgress):Credentials renewed successfully. Waiting for next renewal... ($hour $hourText remaining)"
+                            # Stop indeterminate progress during waiting period
+                            Write-Output "PROGRESS:STOP:Credentials renewed successfully. Waiting for next renewal... ($hour $hourText remaining)"
 
                             # Sleep for 59 minutes with periodic progress updates
                             for ($minute = 59; $minute -gt 0; $minute--) {
                                 Start-Sleep -Seconds 60
                                 if ($minute % 10 -eq 0) {
-                                    Write-Output "PROGRESS:$($overallProgress):Waiting... ($hour $hourText, $minute minutes remaining)"
+                                    Write-Output "PROGRESS:STOP:Waiting... ($hour $hourText, $minute minutes remaining)"
                                 }
                             }
                         } else {
@@ -834,7 +832,7 @@ $Global:WPFGui.StartButton.Add_Click({
                     }
                 }
                 
-                Write-Output "PROGRESS:100:MFA token credentials have expired after 36 hours."
+                Write-Output "PROGRESS:STOP:MFA token credentials have expired after 36 hours."
 
             } catch {
                 Write-Output "Error: $($_.Exception.Message)"
@@ -859,14 +857,13 @@ $Global:WPFGui.StartButton.Add_Click({
                             foreach ($line in $jobOutput) {
                                 try {
                                     # Check if this is a progress message
-                                    if ($line -match '^PROGRESS:(\d+):(.+)$') {
-                                        $progressValue = [int]$matches[1]
-                                        $progressText = $matches[2]
-                                        Write-StatusBar -Progress $progressValue -Text $progressText
-                                        Write-Log $progressText
-                                    } elseif ($line -match '^PROGRESS:INDETERMINATE:(.+)$') {
+                                    if ($line -match '^PROGRESS:INDETERMINATE:(.+)$') {
                                         $progressText = $matches[1]
                                         Write-StatusBar -Text $progressText -Indeterminate
+                                        Write-Log $progressText
+                                    } elseif ($line -match '^PROGRESS:STOP:(.+)$') {
+                                        $progressText = $matches[1]
+                                        Write-StatusBar -Progress 0 -Text $progressText
                                         Write-Log $progressText
                                     } else {
                                         Write-Log $line
@@ -880,6 +877,13 @@ $Global:WPFGui.StartButton.Add_Click({
                         if ($Global:CurrentJob.State -eq 'Completed' -or $Global:CurrentJob.State -eq 'Failed' -or $Global:CurrentJob.State -eq 'Stopped') {
                             if ($Global:JobTimer) { $Global:JobTimer.Stop() }
                             $Global:IsRunning = $false
+                            
+                            # Stop the indeterminate progress bar
+                            try {
+                                Write-StatusBar -Progress 0 -Text "Process completed"
+                            } catch {
+                                # Ignore status update errors
+                            }
                             
                             # Safely update UI controls
                             try {
@@ -1038,6 +1042,9 @@ $Global:WPFGui.RestartButton.Add_Click({
         
         # Clear the log
         $Global:WPFGui.LogOutput.Clear()
+        
+        # Stop indeterminate progress and reset to 0
+        $Global:WPFGui.ProgressBar.IsIndeterminate = $false
         $Global:WPFGui.ProgressBar.Value = 0
         Write-StatusBar -Progress 0 -Text "Ready"
         
