@@ -57,9 +57,16 @@ function Write-StatusBar {
         .PARAMETER Text
         Status Text to display
 
+        .PARAMETER Indeterminate
+        Set progress bar to indeterminate mode
+
         .EXAMPLE
 
         Write-StatusBar -Progress 25 -Text "We're a quarter of the way there."
+
+        .EXAMPLE
+
+        Write-StatusBar -Text "Processing..." -Indeterminate
 
         .NOTES
         If you change the name of $WPFGui, you'll need to change it here.
@@ -73,29 +80,35 @@ function Write-StatusBar {
 
     param (
         # Progress value from 0-100
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [int]
-        $Progress,
+        $Progress = -1,
         # Text to be displayed
         [Parameter(Mandatory = $true)]
         [string]
-        $Text
+        $Text,
+        # Set progress bar to indeterminate mode
+        [Parameter(Mandatory = $false)]
+        [switch]
+        $Indeterminate
     )
-    if ($WPFGui.UI) {
-        $WPFGui.UI.Dispatcher.invoke([action] {
-            $WPFGui.ProgressBar.Value = $Progress
-            $WPFGui.StatusText.Text = $Text
-        })
-    }
+    
+    # Use global variables for DispatcherTimer approach
+    $Global:WPFGui.StatusMessage = $Text
+    $Global:WPFGui.ProgressValue = $Progress
+    $Global:WPFGui.IsIndeterminateMode = $Indeterminate.IsPresent
 }
 
 function Update-Status {
     param(
         [string]$Message,
-        [int]$Progress = -1
+        [int]$Progress = -1,
+        [switch]$Indeterminate
     )
     
-    if ($Progress -ge 0) {
+    if ($Indeterminate) {
+        Write-StatusBar -Text $Message -Indeterminate
+    } elseif ($Progress -ge 0) {
         Write-StatusBar -Progress $Progress -Text $Message
     } else {
         if ($WPFGui.UI) {
@@ -401,20 +414,7 @@ $xaml = @'
         
         <Style TargetType="{x:Type ProgressBar}">
             <Setter Property="Height" Value="8" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ProgressBar}">
-                        <Grid>
-                            <Border Name="PART_Track"
-                                    Background="{StaticResource ProgressBar.Track}"
-                                    BorderThickness="0" CornerRadius="4" Height="8"/>
-                            <Border Name="PART_Indicator" CornerRadius="4" Height="8"
-                                    Background="{StaticResource ProgressBar.Indicator}"
-                                    HorizontalAlignment="Left" />
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <!-- Remove custom template to allow default indeterminate animation -->
         </Style>
 
         <!-- Window Style -->
@@ -597,6 +597,39 @@ try {
     $Global:WPFGui.CloseButton = $Global:WPFGui.UI.FindName("CloseButton")
     $Global:WPFGui.MinimizeButton = $Global:WPFGui.UI.FindName("MinimizeButton")
     $Global:WPFGui.LogScrollViewer = $Global:WPFGui.UI.FindName("LogScrollViewer")
+    
+    # Initialize DispatcherTimer variables
+    $Global:WPFGui.StatusMessage = "Ready"
+    $Global:WPFGui.ProgressValue = 0
+    $Global:WPFGui.IsIndeterminateMode = $false
+    
+    # Create DispatcherTimer for smooth progress bar updates
+    $Global:UpdateTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $Global:UpdateTimer.Interval = [TimeSpan]::FromMilliseconds(50) # Update every 50ms
+    
+    $updateBlock = {
+        try {
+            if ($Global:WPFGui.StatusText) {
+                $Global:WPFGui.StatusText.Text = $Global:WPFGui.StatusMessage
+            }
+            
+            if ($Global:WPFGui.ProgressBar) {
+                if ($Global:WPFGui.IsIndeterminateMode) {
+                    $Global:WPFGui.ProgressBar.IsIndeterminate = $true
+                } else {
+                    $Global:WPFGui.ProgressBar.IsIndeterminate = $false
+                    if ($Global:WPFGui.ProgressValue -ge 0) {
+                        $Global:WPFGui.ProgressBar.Value = $Global:WPFGui.ProgressValue
+                    }
+                }
+            }
+        } catch {
+            # Ignore errors during update
+        }
+    }
+    
+    $Global:UpdateTimer.Add_Tick($updateBlock)
+    $Global:UpdateTimer.Start()
 
     # Verify all controls were found
     $controls = @("AccountComboBox", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText", "CloseButton", "MinimizeButton")
@@ -722,10 +755,12 @@ $Global:WPFGui.StartButton.Add_Click({
                 # Start the renewal loop for 36 hours
                 for ($hour = 36; $hour -gt 0; $hour--) {
                     try {
-                        # Calculate progress: 25% to 95% over 36 hours
-                        $progressPercent = [math]::Round(25 + ((36 - $hour) / 36 * 70))
+                        # Calculate overall progress: 25% to 95% over 36 hours
+                        $overallProgress = [math]::Round(25 + ((36 - $hour) / 36 * 70))
                         $hourText = if ($hour -eq 1) { "hour" } else { "hours" }
-                        Write-Output "PROGRESS:$($progressPercent):Renewing credentials... ($hour $hourText remaining)"
+                        
+                        # Use indeterminate progress bar during actual renewal operations
+                        Write-Output "PROGRESS:INDETERMINATE:Renewing credentials... ($hour $hourText remaining)"
 
                         $creds = aws sts assume-role --role-arn $target_role --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
                         $creds_codeartifact = aws sts assume-role --role-arn $target_role_codeartifact --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
@@ -780,13 +815,14 @@ $Global:WPFGui.StartButton.Add_Click({
                                 Write-Output "NPM not installed or error: $($_.Exception.Message)"
                             }
 
-                            Write-Output "Credentials renewed successfully. Sleeping for 59 minutes... ($hour $hourText remaining)"
+                            # Switch back to normal progress bar for waiting period
+                            Write-Output "PROGRESS:$($overallProgress):Credentials renewed successfully. Waiting for next renewal... ($hour $hourText remaining)"
 
                             # Sleep for 59 minutes with periodic progress updates
                             for ($minute = 59; $minute -gt 0; $minute--) {
                                 Start-Sleep -Seconds 60
                                 if ($minute % 10 -eq 0) {
-                                    Write-Output "PROGRESS:$($progressPercent):Waiting... ($hour $hourText, $minute minutes remaining)"
+                                    Write-Output "PROGRESS:$($overallProgress):Waiting... ($hour $hourText, $minute minutes remaining)"
                                 }
                             }
                         } else {
@@ -827,6 +863,10 @@ $Global:WPFGui.StartButton.Add_Click({
                                         $progressValue = [int]$matches[1]
                                         $progressText = $matches[2]
                                         Write-StatusBar -Progress $progressValue -Text $progressText
+                                        Write-Log $progressText
+                                    } elseif ($line -match '^PROGRESS:INDETERMINATE:(.+)$') {
+                                        $progressText = $matches[1]
+                                        Write-StatusBar -Text $progressText -Indeterminate
                                         Write-Log $progressText
                                     } else {
                                         Write-Log $line
@@ -1016,7 +1056,7 @@ $Global:WPFGui.UI.Add_Closing({
     try {
         $Global:StopRequested = $true
         
-        # Stop the timer first
+        # Stop all timers
         if ($Global:JobTimer) {
             try {
                 $Global:JobTimer.Stop()
@@ -1026,7 +1066,16 @@ $Global:WPFGui.UI.Add_Closing({
             }
         }
         
-        # Then clean up the job
+        if ($Global:UpdateTimer) {
+            try {
+                $Global:UpdateTimer.Stop()
+                $Global:UpdateTimer = $null
+            } catch {
+                # Ignore timer cleanup errors
+            }
+        }
+        
+        # Clean up jobs
         if ($Global:CurrentJob) {
             Stop-Job -Job $Global:CurrentJob -ErrorAction SilentlyContinue
             Remove-Job -Job $Global:CurrentJob -Force -ErrorAction SilentlyContinue
