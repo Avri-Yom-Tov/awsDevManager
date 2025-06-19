@@ -1,9 +1,5 @@
 # AWS Credential Manager with GUI FOR EASY USE OF AWS CREDENTIALS DEVELOPMENT
 
-#region Global Variables and Configuration
-
-
-
 $Global:IsRunning = $false
 $Global:CurrentJob = $null
 $Global:StopRequested = $false
@@ -21,10 +17,7 @@ $target_account_num_codeartifact = '369498121101'
 $m2_config_file = "C:\Users\$env:UserName\.m2\settings.xml"
 $target_profile_name_codeartifact = 'GroupAccess-NICE-Developers' 
 
-
-#region Account LisT ( selection - you can add more accounts here if needed )
 $Global:AccountList = @(
-
     [PSCustomObject]@{ AccountId = 730335479582; Name = "rec-dev" }
     [PSCustomObject]@{ AccountId = 211125581625; Name = "rec-test" }
     [PSCustomObject]@{ AccountId = 339712875220; Name = "rec-perf" }
@@ -32,8 +25,6 @@ $Global:AccountList = @(
     [PSCustomObject]@{ AccountId = 934137132601; Name = "dev-test-perf" }
 )
 
-
-# Add required assemblies at the top level
 try {
     Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase, System.Drawing, System.Windows.Forms
     Write-Host "WPF assemblies loaded successfully"
@@ -42,58 +33,24 @@ try {
     exit 1
 }
 
+#region Global Variables and Configuration
+
+#endregion
+
 #region Utility Functions
 function Write-StatusBar {
-    <#
-        .SYNOPSIS
-        Write text, and a progress percentage, to the StatusBar area
-
-        .DESCRIPTION
-        Writes Status text and progress to the StatusBar area.
-
-        .PARAMETER Progress
-        Progress Bar value, from 0-100
-
-        .PARAMETER Text
-        Status Text to display
-
-        .PARAMETER Indeterminate
-        Set progress bar to indeterminate mode
-
-        .EXAMPLE
-
-        Write-StatusBar -Progress 25 -Text "We're a quarter of the way there."
-
-        .EXAMPLE
-
-        Write-StatusBar -Text "Processing..." -Indeterminate
-
-        .NOTES
-        If you change the name of $WPFGui, you'll need to change it here.
-
-        .INPUTS
-        Text
-
-        .OUTPUTS
-        None
-    #>
-
     param (
-        # Progress value from 0-100
         [Parameter(Mandatory = $false)]
         [int]
         $Progress = -1,
-        # Text to be displayed
         [Parameter(Mandatory = $true)]
         [string]
         $Text,
-        # Set progress bar to indeterminate mode
         [Parameter(Mandatory = $false)]
         [switch]
         $Indeterminate
     )
     
-    # Use global variables for DispatcherTimer approach
     $Global:WPFGui.StatusMessage = $Text
     $Global:WPFGui.ProgressValue = $Progress
     $Global:WPFGui.IsIndeterminateMode = $Indeterminate.IsPresent
@@ -134,7 +91,6 @@ function Write-Log {
         })
     }
     
-    # Write to console for debugging ( dev)
     Write-Host $logMessage
 }
 
@@ -234,9 +190,7 @@ $xaml = @'
     WindowStyle="None"
     Background="Transparent">
     <Window.Resources>
-        <!-- Modern Windows 11 Style Resources -->
         
-        <!-- Button Styles -->
         <SolidColorBrush x:Key="Button.Static.Background" Color="#FFFBFBFB" />
         <SolidColorBrush x:Key="Button.Static.Border" Color="#FFCCCCCC" />
         <SolidColorBrush x:Key="Button.MouseOver.Background" Color="#FF005FB8" />
@@ -307,7 +261,6 @@ $xaml = @'
             </Style.Triggers>
         </Style>
         
-        <!-- ComboBox Styles -->
         <SolidColorBrush x:Key="ComboBox.Static.Background" Color="White" />
         <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#FFBDBDBD" />
         <SolidColorBrush x:Key="ComboBox.MouseOver.Background" Color="#FFFFFFFF" />
@@ -334,7 +287,6 @@ $xaml = @'
             </Style.Triggers>
         </Style>
 
-        <!-- TextBox Styles -->
         <SolidColorBrush x:Key="TextBox.Static.Border" Color="#7F7A7A7A" />
         <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#FF005FB8" />
         <SolidColorBrush x:Key="TextBox.Focus.Border" Color="#FF005FB8" />
@@ -373,7 +325,6 @@ $xaml = @'
             </Setter>
         </Style>
 
-        <!-- GroupBox Styles -->
         <Style TargetType="{x:Type GroupBox}">
             <Setter Property="BorderBrush" Value="#FFE0E0E0" />
             <Setter Property="Background" Value="#FFFFFFFF" />
@@ -408,16 +359,13 @@ $xaml = @'
             </Setter>
         </Style>
 
-        <!-- Progress Bar Style -->
         <SolidColorBrush x:Key="ProgressBar.Track" Color="#FFE0E0E0" />
         <SolidColorBrush x:Key="ProgressBar.Indicator" Color="#FF005FB8" />
         
         <Style TargetType="{x:Type ProgressBar}">
             <Setter Property="Height" Value="8" />
-            <!-- Remove custom template to allow default indeterminate animation -->
         </Style>
 
-        <!-- Window Style -->
         <Style TargetType="Window">
             <Style.Triggers>
                 <Trigger Property="IsActive" Value="False">
@@ -429,7 +377,6 @@ $xaml = @'
             </Style.Triggers>
         </Style>
         
-        <!-- Title Bar Button Style -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
@@ -488,7 +435,6 @@ $xaml = @'
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Title Bar -->
             <Border Grid.Row="0" CornerRadius="8,8,0,0" BorderThickness="0" Background="#FF005FB8">
                 <DockPanel Height="32">
                     <Button DockPanel.Dock="Right" Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" />
@@ -499,14 +445,12 @@ $xaml = @'
                 </DockPanel>
             </Border>
 
-            <!-- Main Content Area -->
             <Grid Grid.Row="1" Margin="20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="320" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Configuration Panel -->
                 <GroupBox Grid.Column="0" Header="Configuration" Margin="0,0,15,0">
                     <StackPanel>
                         <StackPanel Margin="0,0,0,20">
@@ -515,7 +459,6 @@ $xaml = @'
                             <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" />
                         </StackPanel>
                         
-                        <!-- Action Buttons -->
                         <StackPanel Margin="0,30,0,0">
                             <Button Name="StartButton" Content="Start Process" Height="45" Margin="0,0,0,12"
                                     Background="{StaticResource Button.Success.Background}" 
@@ -532,7 +475,6 @@ $xaml = @'
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Activity Log Panel -->
                 <GroupBox Grid.Column="1" Header="Activity Log">
                     <Grid>
                         <Grid.RowDefinitions>
