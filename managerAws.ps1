@@ -359,11 +359,66 @@ $xaml = @'
             </Setter>
         </Style>
 
-        <SolidColorBrush x:Key="ProgressBar.Track" Color="#FFE0E0E0" />
+        <SolidColorBrush x:Key="ProgressBar.Track" Color="#FFE8E8E8" />
         <SolidColorBrush x:Key="ProgressBar.Indicator" Color="#FF005FB8" />
         
         <Style TargetType="{x:Type ProgressBar}">
-            <Setter Property="Height" Value="8" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ProgressBar}">
+                        <Border x:Name="TemplateRoot" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Background="{StaticResource ProgressBar.Track}" CornerRadius="6">
+                            <Grid>
+                                <Rectangle x:Name="PART_Track" />
+                                <Grid x:Name="PART_Indicator" ClipToBounds="true" HorizontalAlignment="Left">
+                                    <Rectangle x:Name="Indicator" Fill="{StaticResource ProgressBar.Indicator}" 
+                                              RadiusX="6" RadiusY="6">
+                                        <Rectangle.Effect>
+                                            <DropShadowEffect BlurRadius="4" ShadowDepth="1" 
+                                                            Color="#33005FB8" Opacity="0.3" />
+                                        </Rectangle.Effect>
+                                    </Rectangle>
+                                    <Rectangle x:Name="Animation" RadiusX="6" RadiusY="6" RenderTransformOrigin="0.5,0.5">
+                                        <Rectangle.Fill>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Color="Transparent" Offset="0" />
+                                                <GradientStop Color="#FF005FB8" Offset="0.4" />
+                                                <GradientStop Color="#FF005FB8" Offset="0.6" />
+                                                <GradientStop Color="Transparent" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Rectangle.Fill>
+                                        <Rectangle.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform />
+                                                <SkewTransform />
+                                                <RotateTransform />
+                                                <TranslateTransform />
+                                            </TransformGroup>
+                                        </Rectangle.RenderTransform>
+                                    </Rectangle>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Vertical">
+                                <Setter Property="LayoutTransform" TargetName="TemplateRoot">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="-90" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsIndeterminate" Value="true">
+                                <Setter Property="Visibility" TargetName="Indicator" Value="Collapsed" />
+                                <Setter Property="Visibility" TargetName="PART_Track" Value="Collapsed" />
+                                <Setter Property="Visibility" TargetName="Animation" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="Window">
@@ -494,16 +549,16 @@ $xaml = @'
             </Grid>
 
                          <!-- Status Bar -->
-             <Border Grid.Row="2" Background="#FFF0F0F0" CornerRadius="0,0,8,8" BorderThickness="0,1,0,0" BorderBrush="#FFE0E0E0">
-                 <Grid Margin="20,12">
+             <Border Grid.Row="2" Background="#FFF8F8F8" CornerRadius="0,0,8,8" BorderThickness="0,1,0,0" BorderBrush="#FFE0E0E0">
+                 <Grid Margin="20,16,20,16">
                      <Grid.RowDefinitions>
                          <RowDefinition Height="Auto" />
                          <RowDefinition Height="Auto" />
                      </Grid.RowDefinitions>
                      
-                     <ProgressBar Grid.Row="0" Name="ProgressBar" Value="0" Height="8" Margin="0,0,0,8" />
+                     <ProgressBar Grid.Row="0" Name="ProgressBar" Value="0" Margin="40,0,40,12" />
                      <TextBlock Grid.Row="1" Name="StatusText" Text="Ready" FontFamily="Segoe UI" FontSize="12" 
-                                HorizontalAlignment="Center" Foreground="#FF666666" />
+                                HorizontalAlignment="Center" Foreground="#FF666666" FontWeight="Medium" />
                  </Grid>
              </Border>
         </Grid>
