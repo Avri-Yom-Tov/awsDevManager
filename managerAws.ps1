@@ -582,6 +582,115 @@ $xaml = @'
 # Initialize the GUI hashtable
 $Global:WPFGui = @{}
 
+# Initialize system tray variables
+$Global:NotifyIcon = $null
+$Global:IsHiddenToTray = $false
+$Global:IsActuallyExiting = $false
+
+function Initialize-SystemTray {
+    try {
+        # Create the NotifyIcon
+        $Global:NotifyIcon = New-Object System.Windows.Forms.NotifyIcon
+        
+        # Set the icon (using the .ico file if it exists, otherwise use a default)
+        $iconPath = Join-Path $PSScriptRoot "managerAws.ico"
+        if (Test-Path $iconPath) {
+            $Global:NotifyIcon.Icon = New-Object System.Drawing.Icon($iconPath)
+        } else {
+            # Use default system icon if ico file not found
+            $Global:NotifyIcon.Icon = [System.Drawing.SystemIcons]::Application
+        }
+        
+        $Global:NotifyIcon.Text = "AWS Credential Manager"
+        $Global:NotifyIcon.Visible = $false
+        
+        # Create context menu for the tray icon
+        $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+        
+        # Show/Restore menu item
+        $showMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+        $showMenuItem.Text = "Show Window"
+        $showMenuItem.Add_Click({
+            Show-WindowFromTray
+        })
+        $contextMenu.Items.Add($showMenuItem)
+        
+        # Separator
+        $contextMenu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+        
+        # Exit menu item
+        $exitMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+        $exitMenuItem.Text = "Exit"
+        $exitMenuItem.Add_Click({
+            Exit-Application
+        })
+        $contextMenu.Items.Add($exitMenuItem)
+        
+        $Global:NotifyIcon.ContextMenuStrip = $contextMenu
+        
+        # Handle double-click to restore window
+        $Global:NotifyIcon.Add_DoubleClick({
+            Show-WindowFromTray
+        })
+        
+        Write-Host "System tray initialized successfully"
+        
+    } catch {
+        Write-Host "Error initializing system tray: $($_.Exception.Message)"
+    }
+}
+
+function Hide-WindowToTray {
+    try {
+        if ($Global:WPFGui.UI -and $Global:NotifyIcon) {
+            $Global:WPFGui.UI.WindowState = 'Minimized'
+            $Global:WPFGui.UI.ShowInTaskbar = $false
+            $Global:NotifyIcon.Visible = $true
+            $Global:IsHiddenToTray = $true
+            Write-Log "Application minimized to system tray"
+        }
+    } catch {
+        Write-Host "Error hiding to tray: $($_.Exception.Message)"
+    }
+}
+
+function Show-WindowFromTray {
+    try {
+        if ($Global:WPFGui.UI -and $Global:NotifyIcon) {
+            $Global:WPFGui.UI.ShowInTaskbar = $true
+            $Global:WPFGui.UI.WindowState = 'Normal'
+            $Global:WPFGui.UI.Activate()
+            $Global:WPFGui.UI.Topmost = $true
+            $Global:WPFGui.UI.Topmost = $false
+            $Global:NotifyIcon.Visible = $false
+            $Global:IsHiddenToTray = $false
+            Write-Log "Application restored from system tray"
+        }
+    } catch {
+        Write-Host "Error showing from tray: $($_.Exception.Message)"
+    }
+}
+
+function Exit-Application {
+    try {
+        $Global:IsActuallyExiting = $true
+        
+        # Clean up tray icon
+        if ($Global:NotifyIcon) {
+            $Global:NotifyIcon.Visible = $false
+            $Global:NotifyIcon.Dispose()
+            $Global:NotifyIcon = $null
+        }
+        
+        # Clean up other resources and close application
+        if ($Global:WPFGui.UI) {
+            $Global:WPFGui.UI.Close()
+        }
+    } catch {
+        Write-Host "Error during application exit: $($_.Exception.Message)"
+    }
+}
+
 try {
     Write-Host "Loading GUI ..."
     
@@ -654,6 +763,16 @@ try {
     $Global:WPFGui.AccountComboBox.ItemsSource = $Global:AccountList
     $Global:WPFGui.AccountComboBox.SelectedIndex = 0
 
+    # Initialize system tray functionality
+    Initialize-SystemTray
+    
+    # Add window state changed event handler for regular minimize behavior
+    $Global:WPFGui.UI.Add_StateChanged({
+        if ($Global:WPFGui.UI.WindowState -eq 'Minimized' -and -not $Global:IsHiddenToTray) {
+            Hide-WindowToTray
+        }
+    })
+
     Write-Log "AWS Credential Manager GUI loaded successfully."
     Write-Log "Select an account and click Start to begin the credential process."
 
@@ -666,11 +785,11 @@ try {
 
 #region Title bar button event handlers
 $Global:WPFGui.MinimizeButton.add_Click({
-    $Global:WPFGui.UI.WindowState = 'Minimized'
+    Hide-WindowToTray
 })
 
 $Global:WPFGui.CloseButton.add_Click({
-    $Global:WPFGui.UI.Close()
+    Exit-Application
 })
 #endregion
 
@@ -1069,8 +1188,23 @@ $Global:WPFGui.RestartButton.Add_Click({
 })
 
 $Global:WPFGui.UI.Add_Closing({
+    param($sender, $e)
     try {
+        # If we're not actually exiting, cancel the close and hide to tray instead
+        if (-not $Global:IsActuallyExiting) {
+            $e.Cancel = $true
+            Hide-WindowToTray
+            return
+        }
+        
         $Global:StopRequested = $true
+        
+        # Clean up system tray
+        if ($Global:NotifyIcon) {
+            $Global:NotifyIcon.Visible = $false
+            $Global:NotifyIcon.Dispose()
+            $Global:NotifyIcon = $null
+        }
         
         # Stop all timers
         if ($Global:JobTimer) {
