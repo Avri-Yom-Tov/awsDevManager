@@ -17,6 +17,7 @@ $Global:CurrentJob = $null
 $Global:StopRequested = $false
 
 # Configuration - Update these with your values ..
+
 $user = 'Avraham.Yom-Tov' 
 $DEFAULT_SESSION = "default"
 $default_region = 'us-west-2'
