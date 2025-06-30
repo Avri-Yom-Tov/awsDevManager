@@ -1,5 +1,17 @@
 # AWS Credential Manager with GUI FOR EASY USE OF AWS CREDENTIALS DEVELOPMENT
 
+# Hide console window
+Add-Type -Name Window -Namespace Console -MemberDefinition '
+[DllImport("Kernel32.dll")]
+public static extern IntPtr GetConsoleWindow();
+
+[DllImport("user32.dll")]
+public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
+'
+
+$consolePtr = [Console.Window]::GetConsoleWindow()
+[Console.Window]::ShowWindow($consolePtr, 0) | Out-Null
+
 $Global:IsRunning = $false
 $Global:CurrentJob = $null
 $Global:StopRequested = $false
